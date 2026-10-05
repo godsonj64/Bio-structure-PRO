@@ -87,7 +87,7 @@ Global shape classification is derived via Principal Component Analysis (PCA) of
 ### Local Development Setup
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/your-org/biostructure-pro.git
+    git clone https://github.com/godsonj64/biostructure-pro.git
     cd biostructure-pro
     ```
 
