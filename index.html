@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BioStructure Pro</title>
+    <meta name="description" content="An advanced tool for analyzing protein structures using AlphaFold predictions and UniProt data, featuring interactive 3D visualization, pLDDT confidence metrics, and detailed structural insights." />
+    <meta property="og:title" content="BioStructure Pro" />
+    <meta property="og:description" content="An advanced tool for analyzing protein structures using AlphaFold predictions and UniProt data, featuring interactive 3D visualization, pLDDT confidence metrics, and detailed structural insights." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/index.css">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+            },
+            colors: {
+              m3: {
+                surface: '#0d1117',
+                'surface-dim': '#080b0f',
+                'surface-bright': '#232938',
+                'surface-low': '#131822',
+                'surface-card': '#19202c',
+                'surface-high': '#202737',
+                'surface-highest': '#283244',
+                primary: '#8ab4f8',
+                'primary-hover': '#aecbfa',
+                'primary-container': '#1a3764',
+                'on-primary-container': '#d2e3fc',
+                secondary: '#a8c7fa',
+                'secondary-container': '#233044',
+                tertiary: '#7cd8cb',
+                'tertiary-container': '#003731',
+                outline: '#364052',
+                'outline-variant': '#262e3d',
+                error: '#f28b82',
+                'error-container': '#491815',
+              }
+            },
+            boxShadow: {
+              'm3-1': '0 1px 3px 1px rgba(0, 0, 0, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.35)',
+              'm3-2': '0 2px 6px 2px rgba(0, 0, 0, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.35)',
+              'm3-3': '0 4px 12px 4px rgba(0, 0, 0, 0.3), 0 2px 4px 0 rgba(0, 0, 0, 0.35)',
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Crossorigin anonymous CDN scripts to prevent opaque "Script error." in iframe -->
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/3Dmol/2.0.4/3Dmol-min.js"></script>
+    <script crossorigin="anonymous" src="https://cdnjs.cloudflare.com/ajax/libs/ngl/2.0.0-dev.37/ngl.js"></script>
+    <script>
+      // Defensive safeguard for NGL.Signal to prevent errors when signals are disposed
+      (function() {
+        function patchSignals() {
+          if (window.NGL && window.NGL.Signal && window.NGL.Signal.prototype) {
+            var p = window.NGL.Signal.prototype;
+            if (p.__safePatched) return true;
+            p.__safePatched = true;
+            var origDispatch = p.dispatch;
+            p.dispatch = function() {
+              if (!this._bindings) return;
+              try {
+                return origDispatch.apply(this, arguments);
+              } catch(e) {
+                // Silently swallow binding-related errors on destroyed instances
+                if (e && String(e.message).indexOf('_bindings') !== -1) return;
+                console.warn("NGL Signal error:", e);
+              }
+            };
+            var origRemoveAll = p.removeAll;
+            p.removeAll = function() {
+              if (!this._bindings) return;
+              return origRemoveAll.apply(this);
+            };
+            var origGetNum = p.getNumListeners;
+            p.getNumListeners = function() {
+              return this._bindings ? this._bindings.length : 0;
+            };
+            var origIndexOf = p._indexOfListener;
+            p._indexOfListener = function(t, e) {
+              if (!this._bindings) return -1;
+              return origIndexOf.call(this, t, e);
+            };
+            return true;
+          }
+          return false;
+        }
+        if (!patchSignals()) {
+          var attempts = 0;
+          var intv = setInterval(function() {
+            attempts++;
+            if (patchSignals() || attempts > 50) clearInterval(intv);
+          }, 50);
+        }
+      })();
+    </script>
+    <style>
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+      .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+      .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+      .custom-scrollbar::-webkit-scrollbar-thumb { 
+        background: rgba(255, 255, 255, 0.12); 
+        border-radius: 9999px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.25); }
+
+      body {
+        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+        background-color: #0d1117;
+        color: #e2e8f0;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .font-mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+      .m3-card {
+        background-color: #19202c;
+        border: 1px solid #262e3d;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      }
+      .m3-card:hover {
+        border-color: #364052;
+        background-color: #1c2432;
+      }
+
+      .m3-tonal-btn {
+        background-color: #233044;
+        color: #d2e3fc;
+        transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+      }
+      .m3-tonal-btn:hover {
+        background-color: #2c3b53;
+        color: #ffffff;
+      }
+
+      @keyframes m3Pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+      .animate-m3-pulse {
+        animation: m3Pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

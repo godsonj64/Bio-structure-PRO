@@ -1,0 +1,6 @@
+{
+  "name": "BioStructure Pro",
+  "description": "An advanced tool for analyzing protein structures using AlphaFold predictions and UniProt data, featuring interactive 3D visualization, pLDDT confidence metrics, and detailed structural insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
